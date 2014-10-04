@@ -322,7 +322,29 @@ void rotate()
 // If every cell in the row is occupied, it will clear that cell and everything above it will shift down one row
 void checkfullrow(int row)
 {
+    bool isFull;
 
+    for (int j = 0 ; j < 20 ; j ++)
+    {
+        isFull = true;
+
+        for (int i = 0 ; i < 10 ; i++)
+        {
+            if (board[i][j] == false) {
+                isFull = false;
+                break; }
+        }
+
+        if (isFull == true)  // if row is full, delete row
+        {
+            for (int k = j+1 ; k < 20 ; k++)
+            {
+                for (int l = 0 ; l < 10 ; l++)
+                    board[k][l] == board[k-1][l];
+            }
+        }
+
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -331,6 +353,15 @@ void checkfullrow(int row)
 void settile()
 {
     // if on bottom
+    if (tilepos.y == 0) {
+        for (int i ; i<4 ; i++) {
+            int x = tile[i].x;
+            int y = tile[i].y;
+            board[x][y] = true;
+        }
+        newtile();
+    }
+
 
     // if on other tiles
 }
@@ -347,6 +378,12 @@ bool movetile(vec2 direction)
     if (tilepos.x == -1)
         tilepos.x = 0;
 
+    // bottom wall
+    if (tilepos.y == -1)
+        tilepos.y = 0;
+
+    settile();
+
     updatetile();
     return true;
 }
@@ -358,6 +395,8 @@ void fall(int i)
 {
     tilepos = tilepos + vec2(0, -1);
     glutTimerFunc(timer, fall, 1);
+    if (tilepos.y == -1)
+        tilepos.y = 0;
     updatetile();
 }
 
