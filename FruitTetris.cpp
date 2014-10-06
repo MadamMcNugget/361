@@ -123,8 +123,6 @@ void updatetile()
 // Called at the start of play and every time a tile is placed
 void newtile()
 {
-    tilepos = vec2(5 , 19); // Put the tile at the top of the board
-
     shapeType = rand() % 3; // Choose one of the 3 shapes we have
     rotationType = rand() % 4; // there are 4 positions for each shape
 
@@ -136,6 +134,18 @@ void newtile()
          tile[i] = allRotationsIshape[rotationType][i];
         else
             tile[i] = allRotationsLshape[rotationType][i]; }
+
+    // random starting position
+    int randx = rand() % 10;
+    tilepos = vec2(randx , 19); // Put the tile at the top of the board
+    for (int i ; i<4 ; i++ ) {
+        while (tilepos.x + tile[i].x < 0)  // check left bound
+            tilepos.x++;
+        while (tilepos.x + tile[i].x > 9)  // check right bound
+            tilepos.x--;
+        while ((tilepos.y + tile[i].y) > 19) // check upper bound
+            tilepos.y--;
+    }
 
     updatetile();
 
@@ -366,6 +376,37 @@ void rotate()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// Shuffle colour order of tile
+void shuffleTile()
+{
+    vec2 extra;
+
+    if (shapeType == 0) {
+        extra = allRotationsSshape[rotationType][3];
+        allRotationsSshape[rotationType][3] = allRotationsSshape[rotationType][2];
+        allRotationsSshape[rotationType][2] = allRotationsSshape[rotationType][1];
+        allRotationsSshape[rotationType][1] = allRotationsSshape[rotationType][0];
+        allRotationsSshape[rotationType][0] = extra; }
+    else if (shapeType == 1) {
+        extra = allRotationsIshape[rotationType][3];
+        allRotationsIshape[rotationType][3] = allRotationsIshape[rotationType][2];
+        allRotationsIshape[rotationType][2] = allRotationsIshape[rotationType][1];
+        allRotationsIshape[rotationType][1] = allRotationsIshape[rotationType][0];
+        allRotationsIshape[rotationType][0] = extra; }
+    else {
+        extra = allRotationsLshape[rotationType][3];
+        allRotationsLshape[rotationType][3] = allRotationsLshape[rotationType][2];
+        allRotationsLshape[rotationType][2] = allRotationsLshape[rotationType][1];
+        allRotationsLshape[rotationType][1] = allRotationsLshape[rotationType][0];
+        allRotationsLshape[rotationType][0] = extra; }
+
+    cout<<"space pressed";
+
+}
+
+
+//-------------------------------------------------------------------------------------------------------------------
+
 // Checks if the specified row (0 is the bottom 19 the top) is full
 // If every cell in the row is occupied, it will clear that cell and everything above it will shift down one row
 void checkfullrow(int row)
@@ -437,15 +478,6 @@ bool movetile(vec2 direction)
 
     updatetile();
 
-    // ignore
-    cout<<"tile moved\n";
-    cout<<"tilepos.x: " << tilepos.x <<"\n";
-    cout<<"tilepos.y: " << tilepos.y <<"\n";
-    for (int i=0 ; i<4 ; i++) {
-        cout<<"tile["<<i<<"].x: " << tile[i].x <<"\n";
-        cout<<"tile["<<i<<"].y: " << tile[i].y <<"\n\n";
-    }
-    cout<<"Out of Bounds: "<< outOfBounds <<"\n";
     //settile();
     return true;
 }
@@ -545,8 +577,8 @@ void keyboard(unsigned char key, int x, int y)
         case 'r': // 'r' key restarts the game
             restart();
             break;
-        case 040: // space bar -> shuffles tile order
-            //shuffleTiles();
+        case ' ': // space bar -> shuffles tile order  //can probably use ' ' if doesn't work
+            shuffleTile();
             break;
     }
 
