@@ -151,14 +151,11 @@ void newtile()
 
     updatetile();
 
-    int counter = 0;
-
     // Update the color VBO of current tile
     vec4 newcolours[24];
     for (int j = 0; j < 24; j++)
     {
         int randColour;
-        int count;
 
         if (remainder(j, 6) == 0) // Assign a new colour every 6 vertices
             randColour = rand() % 5;
@@ -184,6 +181,7 @@ void newtile()
 
     }
 
+    //storing the colours
     tileColours[0] = newcolours[1];
     tileColours[1] = newcolours[7];
     tileColours[2] = newcolours[13];
@@ -407,51 +405,50 @@ void shuffleTile()
 
 // Checks if the specified row (0 is the bottom 19 the top) is full
 // If every cell in the row is occupied, it will clear that cell and everything above it will shift down one row
-void checkfullrow(/*int row*/)
+void checkfullrow(int row)   // <- can use to shorten computation time, maybe
 {
     bool isFull;
 
-    // is row full?
-    for (int j = 0 ; j < 20 ; j ++)       // j = up/down y
-    {
-        isFull = false;
-        int c = 0;
+    for (int z = 1 ; z < 3 ; z++) { // do this twice
 
-        for (int i = 0 ; i < 10 ; i++)    // i = left/right x
+        // is row full?
+        for (int j = row ; j < (row+4); j ++)       // j = up/down y
         {
-            if (board[i][j] == true) {
-                c++; }
-            //cout<<i<<": "<<board[i][j]<<"\n";
-         }
+            isFull = false;
+            int c = 0;
 
-        if (c==10)
-            isFull = true;
-
-        //  something is wrong here...
-        if (isFull) // if row is full, delete row
-        {
-            for (int k = j ; k < 19 ; k++)    // k = up/down y
+            for (int i = 0 ; i < 10 ; i++)    // i = left/right x
             {
-                for (int l = 0 ; l < 10 ; l++) {    // l = left/right x
-                    int co = k * 60 + l * 6;
-                    for (int c = 0 ; c<6 ; c++)
-                        boardcolours[co] = boardcolours[co+60];
-                    board[l][k] = board[l][k+1]; }
+                if (board[i][j] == true) {
+                    c++; }
+             }
+
+            if (c==10)
+                isFull = true;
+
+            if (isFull) // if row is full, delete row
+            {
+                for (int k = j ; k < 19 ; k++)    // k = up/down y
+                {
+                    for (int l = 0 ; l < 10 ; l++) {    // l = left/right x
+                        int a = k * 60 + l * 6;
+                        int b = a+60;
+                        for (int c = 0 ; c<6 ; c++)
+                            boardcolours[a+c] = boardcolours[b+c];   // change boardcolour vertices colours
+                        board[l][k] = board[l][k+1]; }
+                }
+
+                for (int m=0 ; m<10 ; m++)
+                    board[m][19] = false;
+                for (int c=1080 ; c<1200 ; c++)
+                    boardcolours[c] = black;
             }
-
-            for (int m=0 ; m<10 ; m++)
-                board[m][19] = false;
-
         }
-
-        cout<<"full row: "<<isFull<<"\n";
     }
-/*
-    bool yes = true;
-    bool no = false;
-    cout<<"yes: "<<yes<<"\n";
-    cout<<"no: "<<no<<"\n";
-    cout<<"full row: "<<isFull<<"\n";*/
+    glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
+    glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(vColor);
 
 }
 
@@ -468,7 +465,6 @@ void settile()
 
         int xpos = tilepos.x + tile[i].x;
         int ypos = tilepos.y + tile[i].y;
-        int pos = ypos * 60 + xpos;
 
         if (tilepos.y + tile[i].y == 0)  // bottom line
             set = true;
@@ -499,7 +495,12 @@ void settile()
         glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(vColor);
 
-        checkfullrow();
+        int low = tilepos.y;
+        for (int i = 0 ; i<4 ; i++) {
+            if (tilepos.y + tile[i].y < low)
+                low = tilepos.y + tile[i].y;
+        }
+        checkfullrow(low);
         newtile();
 
     }
