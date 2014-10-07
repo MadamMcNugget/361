@@ -158,42 +158,40 @@ void newtile()
     for (int j = 0; j < 24; j++)
     {
         int randColour;
+        int count;
 
         if (remainder(j, 6) == 0) // Assign a new colour every 6 vertices
         {
             randColour = rand() % 5;
-            cout<<"rand: " << randColour << "\n";
+           // cout<<"rand: " << randColour << "\n";
 
-            cout<<"counter: " << counter << "\n";
-            cout<<"tile colour: " << tileColours[counter] <<"\n";
-            counter++;
+           // cout<<"counter: " << counter << "\n";
+            //cout<<"tile colour: " << tileColours[counter] <<"\n";
+            //counter++;   //->WTFFFFFadfwaab
         }
 
         switch(randColour)
         {
             case 0:
                 newcolours[j] = red;
-                tileColours[counter] = newcolours[i];
                 break;
             case 1:
                 newcolours[j] = orange;
-                tileColours[counter] = newcolours[i];
                 break;
             case 2:
                 newcolours[j] = yellow;
-                tileColours[counter] = newcolours[i];
                 break;
             case 3:
                 newcolours[j] = green;
-                tileColours[counter] = newcolours[i];
                 break;
             case 4:
                 newcolours[j] = purple;
-                tileColours[counter] = newcolours[i];
                 break;
         }
 
+        tileColours[counter] = newcolours[j];
 
+        //cout<<"tile colour: " << tileColours[counter] <<"\n";
 
     }
 
@@ -473,8 +471,9 @@ void settile()
             set = true;
 
 
-        if (board[xpos][ypos] == true)  // square is occupied
-            set = true;
+        if (board[xpos][ypos] == true) { // square is occupied
+            tilepos.y++;
+            set = true;  }
     }
 
     // WTF!!!
@@ -494,47 +493,17 @@ void settile()
             tcolour++;
         }
 
-
+/*
         glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
         glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
         glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(vColor);
+        glEnableVertexAttribArray(vColor);*/
 
         newtile();
 
     }
-  /*  if (set)
-    {
-        for (int i=0 ; i<4 ; i++)
-        {
-            int xpos = tilepos.x + tile[i].x;
-            int ypos = tilepos.y + tile[i].y;
-            board[xpos][ypos] = true;
-        }
-        for (int i=0 ; i<4 ; i++)
-        {
-
-        }
-    }
-
-*/
-
-
-
-/*
-    for (int i=0 ; i<4 ; i++) {
-        if (tilepos.y + tile[i].y == 0) {
-            for (int i = 0 ; i<4 ; i++) {
-                int x = tile[i].x;
-                int y = tile[i].y;
-                board[x][y] = true;
-            }
-
-            newtile();
-        }
-    }*/
-    // if on other tiles
 }
+
 //-------------------------------------------------------------------------------------------------------------------
 
 // Given (x,y), tries to move the tile x squares to the right and y squares down
@@ -553,6 +522,8 @@ bool movetile(vec2 direction)
     if (outOfBounds == true) // undo if out of bounds
         tilepos = tilepos - direction;
 
+    for (int i=0 ; i<4 ; i++)
+        cout<<"tilecols: "<<tileColours[i]<<"\n";
 
     updatetile();
     settile();
