@@ -161,14 +161,7 @@ void newtile()
         int count;
 
         if (remainder(j, 6) == 0) // Assign a new colour every 6 vertices
-        {
             randColour = rand() % 5;
-           // cout<<"rand: " << randColour << "\n";
-
-           // cout<<"counter: " << counter << "\n";
-            //cout<<"tile colour: " << tileColours[counter] <<"\n";
-            //counter++;   //->WTFFFFFadfwaab
-        }
 
         switch(randColour)
         {
@@ -189,11 +182,12 @@ void newtile()
                 break;
         }
 
-        tileColours[counter] = newcolours[j];
-
-        //cout<<"tile colour: " << tileColours[counter] <<"\n";
-
     }
+
+    tileColours[0] = newcolours[1];
+    tileColours[1] = newcolours[7];
+    tileColours[2] = newcolours[13];
+    tileColours[3] = newcolours[19];
 
     glBindBuffer(GL_ARRAY_BUFFER, vboIDs[5]); // Bind the VBO containing current tile vertex colours
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(newcolours), newcolours); // Put the colour data in the VBO
@@ -413,34 +407,52 @@ void shuffleTile()
 
 // Checks if the specified row (0 is the bottom 19 the top) is full
 // If every cell in the row is occupied, it will clear that cell and everything above it will shift down one row
-void checkfullrow(int row)
+void checkfullrow(/*int row*/)
 {
     bool isFull;
 
-    for (int j = 0 ; j < 20 ; j ++)
+    // is row full?
+    for (int j = 0 ; j < 20 ; j ++)       // j = up/down y
     {
-        isFull = true;
+        isFull = false;
+        int c = 0;
 
-        for (int i = 0 ; i < 10 ; i++)
+        for (int i = 0 ; i < 10 ; i++)    // i = left/right x
         {
-            if (board[i][j] == false) {
-                isFull = false;
-                break; }
-        }
+            if (board[i][j] == true) {
+                c++; }
+            //cout<<i<<": "<<board[i][j]<<"\n";
+         }
 
-        if (isFull == true) // if row is full, delete row
+        if (c==10)
+            isFull = true;
+
+        //  something is wrong here...
+        if (isFull) // if row is full, delete row
         {
-            for (int k = j+1 ; k < 20 ; k++)
+            for (int k = j ; k < 19 ; k++)    // k = up/down y
             {
-                for (int l = 0 ; l < 10 ; l++)
-                board[k-1][l] = board[k][l];
+                for (int l = 0 ; l < 10 ; l++) {    // l = left/right x
+                    int co = k * 60 + l * 6;
+                    for (int c = 0 ; c<6 ; c++)
+                        boardcolours[co] = boardcolours[co+60];
+                    board[l][k] = board[l][k+1]; }
             }
 
             for (int m=0 ; m<10 ; m++)
                 board[m][19] = false;
 
         }
+
+        cout<<"full row: "<<isFull<<"\n";
     }
+/*
+    bool yes = true;
+    bool no = false;
+    cout<<"yes: "<<yes<<"\n";
+    cout<<"no: "<<no<<"\n";
+    cout<<"full row: "<<isFull<<"\n";*/
+
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -448,13 +460,6 @@ void checkfullrow(int row)
 // Places the current tile - update the board vertex colour VBO and the array maintaining occupied cells
 void settile()
 {
-    // if on bottom   \vec4 boardcolours[1200];
-    /*// Grid cell vertex colours
-    glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
-    glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
-    glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(vColor);*/
-
     bool set = false;
 
     // check to see if tile needs to set
@@ -465,18 +470,16 @@ void settile()
         int ypos = tilepos.y + tile[i].y;
         int pos = ypos * 60 + xpos;
 
-        int tcolour = 0;
-
         if (tilepos.y + tile[i].y == 0)  // bottom line
             set = true;
-
 
         if (board[xpos][ypos] == true) { // square is occupied
             tilepos.y++;
             set = true;  }
     }
 
-    // WTF!!!
+
+    int tcolour = 0;
     if (set) {
         for (int i = 0 ; i<4 ; i++)
         {
@@ -484,21 +487,19 @@ void settile()
             int ypos = tilepos.y + tile[i].y;
             int pos = ypos * 60 + xpos * 6;
 
-            int tcolour = 0;
-
             board[xpos][ypos] = true;
-            for (int i = pos ; i<pos+6 ; i++)
-                boardcolours[i] = tileColours[tcolour];
+            for (int j = pos ; j<pos+6 ; j++)
+                boardcolours[j] = tileColours[tcolour];
 
             tcolour++;
         }
 
-/*
         glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
         glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
         glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(vColor);*/
+        glEnableVertexAttribArray(vColor);
 
+        checkfullrow();
         newtile();
 
     }
@@ -521,9 +522,6 @@ bool movetile(vec2 direction)
 
     if (outOfBounds == true) // undo if out of bounds
         tilepos = tilepos - direction;
-
-    for (int i=0 ; i<4 ; i++)
-        cout<<"tilecols: "<<tileColours[i]<<"\n";
 
     updatetile();
     settile();
