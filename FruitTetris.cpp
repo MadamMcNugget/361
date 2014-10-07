@@ -33,6 +33,8 @@ vec2 tilepos = vec2(5, 19); // The position of the current tile using grid coord
 int rotationType; // one of the 4 rotations
 int shapeType; // which shape -> 0 = S, 1 = I, 2 = L
 
+vec4 tileColours[4];
+
 // Arrays storing all possible orientations of all possible tiles
 // The 'tile' array will always be some element [i][j] of this array (an array of vec2)
 vec2 allRotationsLshape[4][4] =
@@ -149,32 +151,50 @@ void newtile()
 
     updatetile();
 
+    int counter = 0;
+
     // Update the color VBO of current tile
     vec4 newcolours[24];
-    for (int i = 0; i < 24; i++)
+    for (int j = 0; j < 24; j++)
     {
         int randColour;
-        if (remainder(i, 6) == 0) // Assign a new colour every 6 vertices
+
+        if (remainder(j, 6) == 0) // Assign a new colour every 6 vertices
+        {
             randColour = rand() % 5;
+            cout<<"rand: " << randColour << "\n";
+
+            cout<<"counter: " << counter << "\n";
+            cout<<"tile colour: " << tileColours[counter] <<"\n";
+            counter++;
+        }
 
         switch(randColour)
         {
             case 0:
-                newcolours[i] = red;
+                newcolours[j] = red;
+                tileColours[counter] = newcolours[i];
                 break;
             case 1:
-                newcolours[i] = orange;
+                newcolours[j] = orange;
+                tileColours[counter] = newcolours[i];
                 break;
             case 2:
-                newcolours[i] = yellow;
+                newcolours[j] = yellow;
+                tileColours[counter] = newcolours[i];
                 break;
             case 3:
-                newcolours[i] = green;
+                newcolours[j] = green;
+                tileColours[counter] = newcolours[i];
                 break;
             case 4:
-                newcolours[i] = purple;
+                newcolours[j] = purple;
+                tileColours[counter] = newcolours[i];
                 break;
         }
+
+
+
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, vboIDs[5]); // Bind the VBO containing current tile vertex colours
@@ -381,27 +401,13 @@ void shuffleTile()
 {
     vec2 extra;
 
-    if (shapeType == 0) {
-        extra = allRotationsSshape[rotationType][3];
-        allRotationsSshape[rotationType][3] = allRotationsSshape[rotationType][2];
-        allRotationsSshape[rotationType][2] = allRotationsSshape[rotationType][1];
-        allRotationsSshape[rotationType][1] = allRotationsSshape[rotationType][0];
-        allRotationsSshape[rotationType][0] = extra; }
-    else if (shapeType == 1) {
-        extra = allRotationsIshape[rotationType][3];
-        allRotationsIshape[rotationType][3] = allRotationsIshape[rotationType][2];
-        allRotationsIshape[rotationType][2] = allRotationsIshape[rotationType][1];
-        allRotationsIshape[rotationType][1] = allRotationsIshape[rotationType][0];
-        allRotationsIshape[rotationType][0] = extra; }
-    else {
-        extra = allRotationsLshape[rotationType][3];
-        allRotationsLshape[rotationType][3] = allRotationsLshape[rotationType][2];
-        allRotationsLshape[rotationType][2] = allRotationsLshape[rotationType][1];
-        allRotationsLshape[rotationType][1] = allRotationsLshape[rotationType][0];
-        allRotationsLshape[rotationType][0] = extra; }
+    extra = tile[3];
+    tile[3] = tile[2];
+    tile[2] = tile[1];
+    tile[1] = tile[0];
+    tile[0] = extra;
 
-    cout<<"space pressed";
-
+    updatetile();
 }
 
 
@@ -429,7 +435,7 @@ void checkfullrow(int row)
             for (int k = j+1 ; k < 20 ; k++)
             {
                 for (int l = 0 ; l < 10 ; l++)
-                board[k-1][l] == board[k][l];
+                board[k-1][l] = board[k][l];
             }
 
             for (int m=0 ; m<10 ; m++)
@@ -444,17 +450,89 @@ void checkfullrow(int row)
 // Places the current tile - update the board vertex colour VBO and the array maintaining occupied cells
 void settile()
 {
-    // if on bottom
-    if (tilepos.y == 0) {
-        for (int i = 0 ; i<4 ; i++) {
-            int x = tile[i].x;
-            int y = tile[i].y;
-            board[x][y] = true;
-        }
+    // if on bottom   \vec4 boardcolours[1200];
+    /*// Grid cell vertex colours
+    glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
+    glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(vColor);*/
 
-        newtile();
+    bool set = false;
+
+    // check to see if tile needs to set
+    for (int i=0 ; i<4 ; i++)
+    {
+
+        int xpos = tilepos.x + tile[i].x;
+        int ypos = tilepos.y + tile[i].y;
+        int pos = ypos * 60 + xpos;
+
+        int tcolour = 0;
+
+        if (tilepos.y + tile[i].y == 0)  // bottom line
+            set = true;
+
+
+        if (board[xpos][ypos] == true)  // square is occupied
+            set = true;
     }
 
+    // WTF!!!
+    if (set) {
+        for (int i = 0 ; i<4 ; i++)
+        {
+            int xpos = tilepos.x + tile[i].x;
+            int ypos = tilepos.y + tile[i].y;
+            int pos = ypos * 60 + xpos * 6;
+
+            int tcolour = 0;
+
+            board[xpos][ypos] = true;
+            for (int i = pos ; i<pos+6 ; i++)
+                boardcolours[i] = tileColours[tcolour];
+
+            tcolour++;
+        }
+
+
+        glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
+        glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(vColor);
+
+        newtile();
+
+    }
+  /*  if (set)
+    {
+        for (int i=0 ; i<4 ; i++)
+        {
+            int xpos = tilepos.x + tile[i].x;
+            int ypos = tilepos.y + tile[i].y;
+            board[xpos][ypos] = true;
+        }
+        for (int i=0 ; i<4 ; i++)
+        {
+
+        }
+    }
+
+*/
+
+
+
+/*
+    for (int i=0 ; i<4 ; i++) {
+        if (tilepos.y + tile[i].y == 0) {
+            for (int i = 0 ; i<4 ; i++) {
+                int x = tile[i].x;
+                int y = tile[i].y;
+                board[x][y] = true;
+            }
+
+            newtile();
+        }
+    }*/
     // if on other tiles
 }
 //-------------------------------------------------------------------------------------------------------------------
@@ -477,8 +555,7 @@ bool movetile(vec2 direction)
 
 
     updatetile();
-
-    //settile();
+    settile();
     return true;
 }
 
@@ -489,9 +566,10 @@ void fall(int i)
 {
     tilepos = tilepos + vec2(0, -1);
     glutTimerFunc(timer, fall, 1);
-    if (tilepos.y == -1)
+    if (tilepos.y < -1)
         tilepos.y = 0;
     updatetile();
+    settile();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -499,7 +577,7 @@ void fall(int i)
 // Starts the game over - empties the board, creates new tiles, resets line counters
 void restart()
 {
-
+    init();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -577,7 +655,7 @@ void keyboard(unsigned char key, int x, int y)
         case 'r': // 'r' key restarts the game
             restart();
             break;
-        case ' ': // space bar -> shuffles tile order  //can probably use ' ' if doesn't work
+        case ' ': // space bar -> shuffles tile order
             shuffleTile();
             break;
     }
