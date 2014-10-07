@@ -87,6 +87,9 @@ GLuint vboIDs[6]; // Two Vertex Buffer Objects for each VAO (specifying vertex p
 // timer
 int timer = 750; // in milliseconds
 
+// game over
+bool gameOver = false;
+
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -359,7 +362,11 @@ void rotate()
 
     // check bounds
     for (int i=0 ; i<4 ; i++) {
-        if (tilepos.x + tile[i].x < 0 || tilepos.x + tile[i].x > 9)
+        int xpos = tilepos.x + tile[i].x;
+        int ypos = tilepos.y + tile[i].y;
+        if (tilepos.x + tile[i].x < 0 || tilepos.x + tile[i].x > 9) // out of walls
+            outOfBounds = true;
+        if (board[xpos][ypos]) // if square already occupied
             outOfBounds = true;
     }
 
@@ -405,7 +412,7 @@ void shuffleTile()
 
 // Checks if the specified row (0 is the bottom 19 the top) is full
 // If every cell in the row is occupied, it will clear that cell and everything above it will shift down one row
-void checkfullrow(int row)   // <- can use to shorten computation time, maybe
+void checkfullrow(int row)
 {
     bool isFull;
 
@@ -454,6 +461,20 @@ void checkfullrow(int row)   // <- can use to shorten computation time, maybe
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// Game over when any of the top row is true
+void checkGameOver()
+{
+    for (int i = 0 ; i< 10 ; i++) {
+        if (board[i][19]) {
+            gameOver = true;
+            cout<<"Game Over\n";
+        }
+    }
+
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
 // Places the current tile - update the board vertex colour VBO and the array maintaining occupied cells
 void settile()
 {
@@ -475,7 +496,7 @@ void settile()
     }
 
 
-    int tcolour = 0;
+    int tcolour = 0;  // store tile colours in boardcolours
     if (set) {
         for (int i = 0 ; i<4 ; i++)
         {
@@ -500,8 +521,11 @@ void settile()
             if (tilepos.y + tile[i].y < low)
                 low = tilepos.y + tile[i].y;
         }
+
         checkfullrow(low);
-        newtile();
+        checkGameOver();
+        if (!gameOver)
+            newtile();
 
     }
 }
@@ -517,16 +541,22 @@ bool movetile(vec2 direction)
 
     // check bounds
     for (int i=0 ; i<4 ; i++) {
-        if (tilepos.x + tile[i].x < 0 || tilepos.x + tile[i].x > 9)
+        int xpos = tilepos.x + tile[i].x;
+        int ypos = tilepos.y + tile[i].y;
+        if (tilepos.x + tile[i].x < 0 || tilepos.x + tile[i].x > 9)  // if walls exist
+            outOfBounds = true;
+        if (board[xpos][ypos]) // if square already occupied
             outOfBounds = true;
     }
 
-    if (outOfBounds == true) // undo if out of bounds
+    if (outOfBounds == true) {// undo if out of bounds
         tilepos = tilepos - direction;
+        return false; }
 
-    updatetile();
-    settile();
-    return true;
+    else {
+        updatetile();
+        settile();
+        return true; }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -534,12 +564,27 @@ bool movetile(vec2 direction)
 // Makes the tile fall every [timer] seconds
 void fall(int i)
 {
-    tilepos = tilepos + vec2(0, -1);
-    glutTimerFunc(timer, fall, 1);
+    if (!gameOver) {
+        glutTimerFunc(timer, fall, 1);
+        tilepos = tilepos + vec2(0, -1);
+        updatetile();
+        settile();  }
+
     if (tilepos.y < -1)
         tilepos.y = 0;
-    updatetile();
-    settile();
+
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// When 3 of the same fruits are in a row or column, delete and replace with those above
+// called when set
+void three()
+{
+    /*for (int i=0 ; i<4 ; i++)
+    {
+        tileColours[i]
+    }*/
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -547,6 +592,9 @@ void fall(int i)
 // Starts the game over - empties the board, creates new tiles, resets line counters
 void restart()
 {
+    glutTimerFunc(timer, fall, 1);
+    timer = 750;
+    gameOver = false;
     init();
 }
 
@@ -637,7 +685,8 @@ void keyboard(unsigned char key, int x, int y)
 
 void idle(void)
 {
-    glutPostRedisplay();
+    if (!gameOver)
+        glutPostRedisplay();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
