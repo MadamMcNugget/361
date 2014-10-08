@@ -412,46 +412,43 @@ void shuffleTile()
 
 // Checks if the specified row (0 is the bottom 19 the top) is full
 // If every cell in the row is occupied, it will clear that cell and everything above it will shift down one row
-void checkfullrow(int row)
+void checkfullrow()
 {
-    bool isFull;
+    bool isFull = true;
 
-    for (int z = 1 ; z < 3 ; z++) { // do this twice
+	while (isFull) {
+	
+	    isFull = false;
+	    int c = 0;
 
-        // is row full?
-        for (int j = row ; j < (row+4); j ++)       // j = up/down y
-        {
-            isFull = false;
-            int c = 0;
+	    for (int i = 0 ; i < 10 ; i++)    // i = left/right x
+	    {
+	        if (board[i][0] == true) {		//***changed j to 0	
+	            c++; }
+	     }
 
-            for (int i = 0 ; i < 10 ; i++)    // i = left/right x
-            {
-                if (board[i][j] == true) {
-                    c++; }
-             }
+	    if (c==10)
+	        isFull = true;
 
-            if (c==10)
-                isFull = true;
+	    if (isFull) // if row is full, delete row
+	    {
+	        for (int k = 0 ; k < 19 ; k++)    // k = up/down y    ***change j to 0
+	        {
+	            for (int l = 0 ; l < 10 ; l++) {    // l = left/right x
+	                int a = k * 60 + l * 6;
+	                int b = a+60;
+	                for (int c = 0 ; c<6 ; c++)
+	                    boardcolours[a+c] = boardcolours[b+c];   // change boardcolour vertices colours
+	                board[l][k] = board[l][k+1]; }
+	        }
 
-            if (isFull) // if row is full, delete row
-            {
-                for (int k = j ; k < 19 ; k++)    // k = up/down y
-                {
-                    for (int l = 0 ; l < 10 ; l++) {    // l = left/right x
-                        int a = k * 60 + l * 6;
-                        int b = a+60;
-                        for (int c = 0 ; c<6 ; c++)
-                            boardcolours[a+c] = boardcolours[b+c];   // change boardcolour vertices colours
-                        board[l][k] = board[l][k+1]; }
-                }
-
-                for (int m=0 ; m<10 ; m++)
-                    board[m][19] = false;
-                for (int c=1080 ; c<1200 ; c++)
-                    boardcolours[c] = black;
-            }
-        }
-    }
+	        for (int m=0 ; m<10 ; m++)
+	            board[m][19] = false;
+	        for (int c=1080 ; c<1200 ; c++)
+	            boardcolours[c] = black;
+	    }
+	}
+	
     glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
     glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
     glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
@@ -475,6 +472,51 @@ void checkGameOver()
 
 //-------------------------------------------------------------------------------------------------------------------
 
+// falling tiles
+void fallTile()
+{
+	for (int i=0 ; i<10 ; i++)   // i = x
+	{
+		int spacenum = 0;		// number of spaces from bottom to tile above
+		int spaceb = 20;  		// bottom of spaces
+		bool space = false;     // check for space in column
+		bool space2 = false;    // check for block above space in column
+		int j=0;			    // counter
+		
+		while(j<20) {  // j = y
+			if (board[i][j]) {
+				if (space) {
+					space2 = true;
+					break; }
+				j++; }
+			else {  //block not occupied
+				if (spaceb > j)
+					spaceb = j;
+				space = true;
+				spacenum++;
+				j++;
+			}
+		}
+			
+		while (spaceb+spacenum < 20) 
+		{
+			if (space2)
+			{
+				int pos = spaceb * 60 + i * 6;
+				int pos2 = pos + (spacenum*60);
+				board[i][spaceb] = board[i][spaceb+spacenum];    // update occupancy
+				for (int c=0 ; c<6 ; c++)
+					boardcolours[pos+c] = boardcolours[pos2+c];  // update colours
+				for (int z=(1200-(spacenum*60)) ; z<1200 ; z++)
+					boardcolours[z] = black;
+			}
+			spaceb++;
+		}
+		
+	}
+}
+//-------------------------------------------------------------------------------------------------------------------
+
 // Places the current tile - update the board vertex colour VBO and the array maintaining occupied cells
 void settile()
 {
@@ -496,19 +538,17 @@ void settile()
     }
 
 
-    int tcolour = 0;  // store tile colours in boardcolours
     if (set) {
         for (int i = 0 ; i<4 ; i++)
         {
             int xpos = tilepos.x + tile[i].x;
             int ypos = tilepos.y + tile[i].y;
             int pos = ypos * 60 + xpos * 6;
-
+						
             board[xpos][ypos] = true;
             for (int j = pos ; j<pos+6 ; j++)
-                boardcolours[j] = tileColours[tcolour];
+                boardcolours[j] = tileColours[i];
 
-            tcolour++;
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
@@ -516,19 +556,21 @@ void settile()
         glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
         glEnableVertexAttribArray(vColor);
 
-        int low = tilepos.y;
+       /* int low = tilepos.y;
         for (int i = 0 ; i<4 ; i++) {
             if (tilepos.y + tile[i].y < low)
                 low = tilepos.y + tile[i].y;
-        }
-
-        checkfullrow(low);
+        } */
+		fallTile();
+        checkfullrow();
         checkGameOver();
         if (!gameOver)
             newtile();
 
     }
 }
+
+
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -577,7 +619,7 @@ void fall(int i)
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// When 3 of the same fruits are in a row or column, delete and replace with those above
+// Check for rows/columns to see if the have three of the same fruits
 // called when set
 void three()
 {
