@@ -87,8 +87,13 @@ GLuint vboIDs[6]; // Two Vertex Buffer Objects for each VAO (specifying vertex p
 // timer
 int timer = 750; // in milliseconds
 
+// level related things
+int level = 1;
+int deleted = 0;
+
 // game over
 bool gameOver = false;
+
 
 //-------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------
@@ -194,6 +199,17 @@ void newtile()
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(newcolours), newcolours); // Put the colour data in the VBO
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
+
+    // if new piece cannot fit on board
+    for (int i=0 ; i<4 ; i++) {
+        int xpos = tilepos.x + tile[i].x;
+        int ypos = tilepos.y + tile[i].y;
+        if (board[xpos][ypos]) { // if square already occupied
+            gameOver = true;
+            cout<<"Game Over\n";
+            exit(EXIT_SUCCESS);}
+
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -459,7 +475,7 @@ void checkfullrow()
 //-------------------------------------------------------------------------------------------------------------------
 
 // Game over when any of the top row is true
-void checkGameOver()
+/*void checkGameOver()
 {
     for (int i = 0 ; i< 10 ; i++) {
         if (board[i][19]) {
@@ -468,7 +484,7 @@ void checkGameOver()
         }
     }
 
-}
+}*/
 
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -515,6 +531,108 @@ void fallTile()
 		
 	}
 }
+
+//-------------------------------------------------------------------------------------------------------------------
+
+// Check for rows/columns to see if the have three of the same fruits. no combos
+// called when set
+void three()
+{
+    for (int y=0 ; y<20 ; y++)  // y
+    {
+        for (int x=0 ; x<8 ; x++)  // check row
+        {
+            int tcol = y * 60 + x * 6;
+            {
+
+                if ((boardcolours[tcol].x == boardcolours[tcol+6].x) &&     // since (boardcolours[tcol] == boardcolours[tcol+6]
+                    (boardcolours[tcol].y == boardcolours[tcol+6].y) &&     // does not seem to work
+                    (boardcolours[tcol].z == boardcolours[tcol+6].z) &&
+                     board[x][y] && board[x+1][y]  &&
+                    (boardcolours[tcol].x == boardcolours[tcol+12].x) &&
+                    (boardcolours[tcol].y == boardcolours[tcol+12].y) &&
+                    (boardcolours[tcol].z == boardcolours[tcol+12].z) &&
+                     board[x][y] && board[x+2][y])   // row has three of same colour
+                { // if begins
+
+                    for (int yy=y ; yy<19 ; yy++)
+                    {
+                        int tcoll = yy * 60 + x * 6;
+                        board[x][yy] = board[x][yy+1];                           // update board occupancy
+                        for (int c=0 ; c<6 ; c++)                                // update colours
+                            boardcolours[tcoll+c] = boardcolours[tcoll+60+c];
+                        board[x+1][yy] = board[x+1][yy+1];
+                        for (int c=0 ; c<6 ; c++)
+                            boardcolours[tcoll+c+6] = boardcolours[tcoll+66+c];
+                        board[x+2][yy] = board[x+2][yy+1];
+                        for (int c=0 ; c<6 ; c++)
+                            boardcolours[tcoll+c+12] = boardcolours[tcoll+72+c];
+\
+                    }
+
+                    deleted++;    // level up
+                    if (deleted == 10)
+                    {
+                        level++;
+                        timer = 750/level;
+                        cout<<"Leveled Up! Now level "<<level<<"\n";
+                        deleted = 0;
+                    }
+
+                }  // end if
+            }
+        } 
+    }
+
+    for (int y=0 ; y<18 ; y++)
+    {
+
+        for (int x=0 ; x<10 ; x++)   // check column
+        {
+            int tcol = y * 60 + x * 6;
+
+            if ((boardcolours[tcol].x == boardcolours[tcol+60].x) &&     // since (boardcolours[tcol] == boardcolours[tcol+6]
+                (boardcolours[tcol].y == boardcolours[tcol+60].y) &&     // does not seem to work
+                (boardcolours[tcol].z == boardcolours[tcol+60].z) &&     // column has three of same colour
+                 board[x][y] && board[x][y+1]  &&
+                (boardcolours[tcol].x == boardcolours[tcol+120].x) &&
+                (boardcolours[tcol].y == boardcolours[tcol+120].y) &&
+                (boardcolours[tcol].z == boardcolours[tcol+120].z) &&
+                 board[x][y] && board[x][y+2])
+            {  // if begins
+
+                for (int yy=y ; yy<16 ; yy++)                 //**FIX THIS BLOODY THING  -> RESET TOP
+                {
+                    if (yy<16)
+                    {
+                    int tcoll = yy * 60 + x * 6;
+                    board[x][yy] = board[x][yy+3];                           // update board occupancy
+                    for (int c=0 ; c<6 ; c++)                                // update colours
+                        boardcolours[tcoll+c] = boardcolours[tcoll+180+c];
+                    }
+                    else
+                    {
+                        board[x][yy] = false;
+                        boardcolours[yy*60+x+6] = black;
+                    }
+                }
+
+
+                deleted++;   // level up
+                if (deleted == 10)
+                {
+                    level++;
+                    timer = 750/level;
+                    cout<<"Leveled Up! Now level "<<level<<"\n";
+                    deleted = 0;
+                }
+
+            }  // end if
+
+        }
+    }
+}
+
 //-------------------------------------------------------------------------------------------------------------------
 
 // Places the current tile - update the board vertex colour VBO and the array maintaining occupied cells
@@ -562,8 +680,9 @@ void settile()
                 low = tilepos.y + tile[i].y;
         } */
 		fallTile();
+        three();
         checkfullrow();
-        checkGameOver();
+        //checkGameOver();
         if (!gameOver)
             newtile();
 
@@ -603,7 +722,7 @@ bool movetile(vec2 direction)
 
 //-------------------------------------------------------------------------------------------------------------------
 
-// Makes the tile fall every [timer] seconds
+// Makes the current tile fall every [timer] seconds
 void fall(int i)
 {
     if (!gameOver) {
@@ -617,26 +736,17 @@ void fall(int i)
 
 }
 
-//-------------------------------------------------------------------------------------------------------------------
-
-// Check for rows/columns to see if the have three of the same fruits
-// called when set
-void three()
-{
-    /*for (int i=0 ; i<4 ; i++)
-    {
-        tileColours[i]
-    }*/
-}
 
 //-------------------------------------------------------------------------------------------------------------------
 
 // Starts the game over - empties the board, creates new tiles, resets line counters
 void restart()
 {
-    glutTimerFunc(timer, fall, 1);
+    /*glutTimerFunc(timer, fall, 1);*/
     timer = 750;
     gameOver = false;
+    level = 1;
+    deleted = 0;
     init();
 }
 
@@ -742,6 +852,13 @@ int main(int argc, char **argv)
     glutCreateWindow("Fruit Tetris");
     glewInit();
     init();
+
+    // Menu functions
+  /*  glutCreateMenu(menu)
+    glutAddMenuEntry("Clear Screen", 1);
+    glutAddMenuEntry("Delete Row", 2);
+    glutAddMenuEntry("Don't Delete Row", 3);
+    glutAddMenuEntry("Level 1", 4);*/
 
     // Callback functions
     glutDisplayFunc(display);
