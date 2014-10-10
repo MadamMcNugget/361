@@ -55,6 +55,8 @@ vec2 allRotationsSshape[4][4] =
      {vec2(1, 1), vec2(0, 1), vec2(0, 0), vec2(-1, 0)},
      {vec2(-1, 1), vec2(-1, 0), vec2(0, 0), vec2(0, -1)}};
 
+
+
 // colours
 vec4 red = vec4(1.0, 0.0, 0.0, 1.0);
 vec4 orange = vec4(1.0, 0.5, 0.0, 1.0);
@@ -90,6 +92,11 @@ int timer = 750; // in milliseconds
 // level related things
 int level = 1;
 int deleted = 0;
+
+// game options
+bool fallTiles = true;
+bool checkRows = false;
+bool findThrees = true;
 
 // game over
 bool gameOver = false;
@@ -499,7 +506,7 @@ void fallTile()
 		bool space2 = false;    // check for block above space in column
 		int j=0;			    // counter
 		
-		while(j<20) {  // j = y
+        while(j<20) {  // j = y    // checks whether needs to fall, if yes, space2 = true
 			if (board[i][j]) {
 				if (space) {
 					space2 = true;
@@ -514,22 +521,30 @@ void fallTile()
 			}
 		}
 			
-		while (spaceb+spacenum < 20) 
-		{
-			if (space2)
-			{
+        if (space2)
+        {
+            while (spaceb+spacenum < 20)
+            {
 				int pos = spaceb * 60 + i * 6;
 				int pos2 = pos + (spacenum*60);
 				board[i][spaceb] = board[i][spaceb+spacenum];    // update occupancy
 				for (int c=0 ; c<6 ; c++)
-					boardcolours[pos+c] = boardcolours[pos2+c];  // update colours
-				for (int z=(1200-(spacenum*60)) ; z<1200 ; z++)
-					boardcolours[z] = black;
+                    boardcolours[pos+c] = boardcolours[pos2+c];  // update colours
+                spaceb++;
 			}
-			spaceb++;
-		}
+            while (spaceb < 20)  // filling whatevers left on top with blanks
+            {
+                int pos = spaceb * 60 + i * 6;
+                int pos2 = pos + (spacenum*60);
+                board[i][spaceb] = false;
+                for (int c=0 ; c<6 ; c++)
+                    boardcolours[pos+c] = black;
+                spaceb++;
+            }
+        }
 		
-	}
+    }
+
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -538,39 +553,126 @@ void fallTile()
 // called when set
 void three()
 {
-    for (int y=0 ; y<20 ; y++)  // y
+    bool del = true;
+
+    while (del)
     {
-        for (int x=0 ; x<8 ; x++)  // check row
+        del = false;
+
+        for (int y=0 ; y<20 ; y++)  // y
         {
-            int tcol = y * 60 + x * 6;
+            for (int x=0 ; x<8 ; x++)  // check row
             {
+                int tcol = y * 60 + x * 6;
+                {
 
-                if ((boardcolours[tcol].x == boardcolours[tcol+6].x) &&     // since (boardcolours[tcol] == boardcolours[tcol+6]
-                    (boardcolours[tcol].y == boardcolours[tcol+6].y) &&     // does not seem to work
-                    (boardcolours[tcol].z == boardcolours[tcol+6].z) &&
-                     board[x][y] && board[x+1][y]  &&
-                    (boardcolours[tcol].x == boardcolours[tcol+12].x) &&
-                    (boardcolours[tcol].y == boardcolours[tcol+12].y) &&
-                    (boardcolours[tcol].z == boardcolours[tcol+12].z) &&
-                     board[x][y] && board[x+2][y])   // row has three of same colour
-                { // if begins
+                    if ((boardcolours[tcol].x == boardcolours[tcol+6].x) &&     // since (boardcolours[tcol] == boardcolours[tcol+6]
+                        (boardcolours[tcol].y == boardcolours[tcol+6].y) &&     // does not seem to work
+                        (boardcolours[tcol].z == boardcolours[tcol+6].z) &&
+                         board[x][y] && board[x+1][y]  &&
+                        (boardcolours[tcol].x == boardcolours[tcol+12].x) &&
+                        (boardcolours[tcol].y == boardcolours[tcol+12].y) &&
+                        (boardcolours[tcol].z == boardcolours[tcol+12].z) &&
+                         board[x][y] && board[x+2][y])   // row has three of same colour
+                    { // if begins
 
-                    for (int yy=y ; yy<19 ; yy++)
+                        if (fallTiles)
+                        {
+                            for (int yy=y ; yy<19 ; yy++)
+                            {
+                                int tcoll = yy * 60 + x * 6;
+                                board[x][yy] = board[x][yy+1];                           // update board occupancy
+                                for (int c=0 ; c<6 ; c++)                                // update colours
+                                    boardcolours[tcoll+c] = boardcolours[tcoll+60+c];
+                                board[x+1][yy] = board[x+1][yy+1];
+                                for (int c=0 ; c<6 ; c++)
+                                    boardcolours[tcoll+c+6] = boardcolours[tcoll+66+c];
+                                board[x+2][yy] = board[x+2][yy+1];
+                                for (int c=0 ; c<6 ; c++)
+                                    boardcolours[tcoll+c+12] = boardcolours[tcoll+72+c];
+
+                            }
+                        }
+                        else
+                        {
+                            int tcoll = y * 60 + x * 6;
+                            board[x][y] = false;                           // update board occupancy
+                            for (int c=0 ; c<6 ; c++)                                // update colours
+                                boardcolours[tcoll+c] = black;
+                            board[x+1][y] = false;
+                            for (int c=0 ; c<6 ; c++)
+                                boardcolours[tcoll+c+6] = black;
+                            board[x+2][y] = false;
+                            for (int c=0 ; c<6 ; c++)
+                                boardcolours[tcoll+c+12] = black;
+                        }
+
+                        del = true;
+                        deleted++;    // level up if deleted enough lines
+                        if (deleted == 10)
+                        {
+                            level++;
+                            timer = 750/level;
+                            cout<<"Leveled Up! Now level "<<level<<"\n";
+                            deleted = 0;
+                        }
+
+                    }  // end if
+                }
+            }
+        }
+
+        for (int y=0 ; y<18 ; y++)
+        {
+
+            for (int x=0 ; x<10 ; x++)   // check column
+            {
+                int tcol = y * 60 + x * 6;
+
+                if ((boardcolours[tcol].x == boardcolours[tcol+60].x) &&     // since (boardcolours[tcol] == boardcolours[tcol+6]
+                    (boardcolours[tcol].y == boardcolours[tcol+60].y) &&     // does not seem to work
+                    (boardcolours[tcol].z == boardcolours[tcol+60].z) &&     // column has three of same colour
+                     board[x][y] && board[x][y+1]  &&
+                    (boardcolours[tcol].x == boardcolours[tcol+120].x) &&
+                    (boardcolours[tcol].y == boardcolours[tcol+120].y) &&
+                    (boardcolours[tcol].z == boardcolours[tcol+120].z) &&
+                     board[x][y] && board[x][y+2])
+                {  // if begins
+
+                    if (fallTiles)
                     {
-                        int tcoll = yy * 60 + x * 6;
-                        board[x][yy] = board[x][yy+1];                           // update board occupancy
+                        for (int yy=y ; yy<20 ; yy++)                 //if column has three of a kind
+                        {
+                            if (yy<17)                      // if 17 or higher, just delete
+                            {
+                            int tcoll = yy * 60 + x * 6;
+                            board[x][yy] = board[x][yy+3];                           // update board occupancy
+                            for (int c=0 ; c<6 ; c++)                                // update colours
+                                boardcolours[tcoll+c] = boardcolours[tcoll+180+c];
+                            }
+                            else
+                            {
+                                board[x][yy] = false;
+                                boardcolours[yy*60+x+6] = black;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        int tcoll = y * 60 + x * 6;
+                        board[x][y] = false;                           // update board occupancy
                         for (int c=0 ; c<6 ; c++)                                // update colours
-                            boardcolours[tcoll+c] = boardcolours[tcoll+60+c];
-                        board[x+1][yy] = board[x+1][yy+1];
+                            boardcolours[tcoll+c] = black;
+                        board[x][y+1] = false;
                         for (int c=0 ; c<6 ; c++)
-                            boardcolours[tcoll+c+6] = boardcolours[tcoll+66+c];
-                        board[x+2][yy] = board[x+2][yy+1];
+                            boardcolours[tcoll+c+60] = black;
+                        board[x][y+2] = false;
                         for (int c=0 ; c<6 ; c++)
-                            boardcolours[tcoll+c+12] = boardcolours[tcoll+72+c];
-\
+                            boardcolours[tcoll+c+120] = black;
                     }
 
-                    deleted++;    // level up
+                    del = true;
+                    deleted++;   // level up
                     if (deleted == 10)
                     {
                         level++;
@@ -580,55 +682,8 @@ void three()
                     }
 
                 }  // end if
+
             }
-        } 
-    }
-
-    for (int y=0 ; y<18 ; y++)
-    {
-
-        for (int x=0 ; x<10 ; x++)   // check column
-        {
-            int tcol = y * 60 + x * 6;
-
-            if ((boardcolours[tcol].x == boardcolours[tcol+60].x) &&     // since (boardcolours[tcol] == boardcolours[tcol+6]
-                (boardcolours[tcol].y == boardcolours[tcol+60].y) &&     // does not seem to work
-                (boardcolours[tcol].z == boardcolours[tcol+60].z) &&     // column has three of same colour
-                 board[x][y] && board[x][y+1]  &&
-                (boardcolours[tcol].x == boardcolours[tcol+120].x) &&
-                (boardcolours[tcol].y == boardcolours[tcol+120].y) &&
-                (boardcolours[tcol].z == boardcolours[tcol+120].z) &&
-                 board[x][y] && board[x][y+2])
-            {  // if begins
-
-                for (int yy=y ; yy<16 ; yy++)                 //**FIX THIS BLOODY THING  -> RESET TOP
-                {
-                    if (yy<16)
-                    {
-                    int tcoll = yy * 60 + x * 6;
-                    board[x][yy] = board[x][yy+3];                           // update board occupancy
-                    for (int c=0 ; c<6 ; c++)                                // update colours
-                        boardcolours[tcoll+c] = boardcolours[tcoll+180+c];
-                    }
-                    else
-                    {
-                        board[x][yy] = false;
-                        boardcolours[yy*60+x+6] = black;
-                    }
-                }
-
-
-                deleted++;   // level up
-                if (deleted == 10)
-                {
-                    level++;
-                    timer = 750/level;
-                    cout<<"Leveled Up! Now level "<<level<<"\n";
-                    deleted = 0;
-                }
-
-            }  // end if
-
         }
     }
 }
@@ -669,6 +724,21 @@ void settile()
 
         }
 
+
+
+        if (fallTiles)
+            fallTile();
+        if (findThrees)
+            three();
+        if (checkRows)
+            checkfullrow();
+
+        //checkGameOver();
+        if (!gameOver)
+            newtile();
+
+
+
         glBindBuffer(GL_ARRAY_BUFFER, vboIDs[3]);
         glBufferData(GL_ARRAY_BUFFER, 1200*sizeof(vec4), boardcolours, GL_DYNAMIC_DRAW);
         glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
@@ -679,13 +749,6 @@ void settile()
             if (tilepos.y + tile[i].y < low)
                 low = tilepos.y + tile[i].y;
         } */
-		fallTile();
-        three();
-        checkfullrow();
-        //checkGameOver();
-        if (!gameOver)
-            newtile();
-
     }
 }
 
@@ -841,6 +904,48 @@ void idle(void)
         glutPostRedisplay();
 }
 
+void menu(int op)
+{
+    switch (op)
+    {
+        case 1:
+            restart();
+            break;
+        case 2:
+            if (checkRows)
+                checkRows = false;
+            else
+                checkRows = true;
+            break;
+        case 3:
+            if (fallTiles)
+                fallTiles = false;
+            else
+                checkRows = true;
+            break;
+        case 4:
+            exit(EXIT_SUCCESS);
+        case 5:
+            restart();
+            break;
+        case 6:
+            restart();
+            level = 3;
+            timer = 750/level;
+            break;
+        case 7:
+            restart();
+            level = 5;
+            timer = 750/level;
+            break;
+        case 8:
+            restart();
+            level = 7;
+            timer = 750/level;
+            break;
+    }
+}
+
 //-------------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char **argv)
@@ -853,12 +958,21 @@ int main(int argc, char **argv)
     glewInit();
     init();
 
+    // Sub Menu
+    int subMenu = glutCreateMenu(menu);
+    glutAddMenuEntry("Level 1", 5);
+    glutAddMenuEntry("Level 3", 6);
+    glutAddMenuEntry("Level 5", 7);
+    glutAddMenuEntry("Level 7", 8);
+
     // Menu functions
-  /*  glutCreateMenu(menu)
-    glutAddMenuEntry("Clear Screen", 1);
-    glutAddMenuEntry("Delete Row", 2);
-    glutAddMenuEntry("Don't Delete Row", 3);
-    glutAddMenuEntry("Level 1", 4);*/
+    glutCreateMenu(menu);
+    glutAddMenuEntry("Restart", 1);
+    glutAddSubMenu("Skip to level ", subMenu);
+    glutAddMenuEntry("Disable/Enable row deletion", 2);
+    glutAddMenuEntry("Disable/Enable falling tiles", 3);
+    glutAddMenuEntry("Quit", 4);
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
 
     // Callback functions
     glutDisplayFunc(display);
